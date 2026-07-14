@@ -1,1 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards Réseau PME</title>
+    
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Flashcards Réseau">
+    <link rel="apple-touch-icon" href="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=180&h=180&fit=crop&q=80">
 
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Flashcards Réseau Local PME","short_name":"NetCards","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#2563eb","orientation":"portrait","icons":[{"src":"https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=192&h=192&fit=crop&q=80","sizes":"192x192","type":"image/png"},{"src":"https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=512&h=512&fit=crop&q=80","sizes":"512x512","type":"image/png"}]}' />
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --star-color: #eab308;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+
+        body.dark-theme {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-dark: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            margin: 0;
+            color: var(--primary);
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background-color: var(--border);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--primary);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tool-btn {
+            background: var(--card-bg);
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .tool-btn:hover { background-color: var(--border); }
+        .tool-btn.active { background-color: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Card 3D Setup */
+        .flashcard-wrapper {
+            perspective: 1000px;
+            width: 100%;
+            height: 320px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px -5px var(--shadow);
+            border-radius: 20px;
+        }
+
+        .flashcard.flipped { transform: rotateY(180deg); }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            padding: 25px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+        }
+
+        .star-icon {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            z-index: 10;
+            transition: transform 0.2s;
+        }
+        .star-icon.starred { color: var(--star-color); }
+
+        .card-front .tag {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+        }
+        body.dark-theme .card-front .tag { background: #1e3a8a; color: #60a5fa; }
+
+        .card-front .content { font-size: 1.3rem; font-weight: 700; line-height: 1.4; }
+        .card-back { transform: rotateY(180deg); border-left: 6px solid var(--primary); }
+        .card-back .content { font-size: 1rem; line-height: 1.5; text-align: left; overflow-y: auto; max-height: 220px; }
+
+        .hint { position: absolute; bottom: 15px; font-size: 0.75rem; color: var(--text-muted); }
+
+        /* Évaluation de la carte (Acquis / À revoir) */
+        .evaluation-zone {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .evaluation-zone.visible { opacity: 1; pointer-events: auto; }
+
+        .eval-btn {
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+        .eval-btn.know { background-color: var(--success); }
+        .eval-btn.review { background-color: var(--danger); }
+
+        /* Navigation globale */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-btn:disabled { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+        body.dark-theme .nav-btn:disabled { background-color: #334155; color: #64748b; }
+
+        /* Tableau des Scores */
+        .stats-summary {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        /* Notif d'installation PWA */
+        .pwa-badge {
+            background: #22c55e;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            display: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="install-pwa" class="pwa-badge" onclick="triggerPWAInstall()">
+            📲 Installer l'application sur votre écran d'accueil (Hors-ligne)
+        </div>
+
+        <header>
+            <h1>Réseau PME</h1>
+            <button class="tool-btn" onclick="toggleTheme()" id="theme-btn">🌙 Sombre</button>
+        </header>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="toolbar">
+            <button class="tool-btn" onclick="shuffleCards()">🔀 Mélanger</button>
+            <button class="tool-btn" onclick="toggleStarredFilter()" id="filter-btn">
+                ⭐ Favoris (<span id="starred-count">0</span>)
+            </button>
+            <button class="tool-btn" onclick="resetStats()">🔄 Reset Scores</button>
+        </div>
+
+        <div class="flashcard-wrapper">
+            <div class="star-icon" id="star-btn" onclick="toggleStar(event)">★</div>
+            <div class="flashcard" id="card" onclick="flipCard()">
+                <div class="card-face card-front">
+                    <span class="tag">Concept / Question</span>
+                    <div class="content" id="front-text">Chargement...</div>
+                    <div class="hint">Touchez pour retourner</div>
+                </div>
+                <div class="card-face card-back">
+                    <div class="content" id="back-text">Chargement...</div>
+                    <div class="hint">Touchez pour revenir</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="evaluation-zone" id="eval-zone">
+            <button class="eval-btn review" onclick="markCard(false)">❌ À revoir</button>
+            <button class="eval-btn know" onclick="markCard(true)">✅ Acquis</button>
+        </div>
+
+        <div class="controls">
+            <button class="nav-btn" id="prev-btn" onclick="prevCard()">&larr; Préc.</button>
+            <span class="progress-indicator" id="progress">1 / 25</span>
+            <button class="nav-btn" id="next-btn" onclick="nextCard()">Suiv. &rarr;</button>
+        </div>
+
+        <div class="stats-summary">
+             Score de révision : <b style="color: var(--success);" id="score-acquis">0</b> Acquis / 
+            <b style="color: var(--danger);" id="score-revoir">0</b> À revoir
+        </div>
+    </div>
+
+    <script>
+        const originalCards = [
+            {"id": 1, "front": "Topologie en étoile (physique)", "back": "Structure de réseau où tous les terminaux sont connectés individuellement à un nœud central (comme un commutateur). Elle offre une grande tolérance aux pannes : si un câble se rompt, seul le poste concerné est déconnecté."},
+            {"id": 2, "front": "Rôle principal d'un commutateur (Switch) L2", "back": "Équipement central qui interconnecte les périphériques au sein d'un même réseau local. Il prend ses décisions d'aiguillage via les adresses MAC et gère les VLANs."},
+            {"id": 3, "front": "Rôle principal d'un routeur (L3)", "back": "Équipement de couche 3 du modèle OSI qui interconnecte différents réseaux logiques et trouve le meilleur chemin pour acheminer les paquets IP d'un sous-réseau à un autre."},
+            {"id": 4, "front": "VLAN (Virtual Local Area Network)", "back": "Technologie permettant de segmenter un réseau physique unique en plusieurs réseaux logiques indépendants pour améliorer la sécurité et limiter les tempêtes de diffusion."},
+            {"id": 5, "front": "Trunk (liaison)", "back": "Lien physique configuré entre deux commutateurs (ou commutateur-routeur) capable de faire transiter simultanément le trafic de plusieurs VLANs grâce au marquage des trames."},
+            {"id": 6, "front": "Norme IEEE 802.1Q (Dot1Q)", "back": "Standard d'encapsulation universel insérant un tag de 4 octets dans l'en-tête de la trame Ethernet pour indiquer son VLAN d'appartenance sur un lien Trunk."},
+            {"id": 7, "front": "Router-on-a-Stick (ROAS)", "back": "Technique de routage inter-VLAN utilisant un unique lien physique Trunk entre le routeur et le commutateur, découpé logiquement en sous-interfaces virtuelles."},
+            {"id": 8, "front": "Sous-interface (logicielle)", "back": "Division logicielle d'une interface physique de routeur (ex: Gi0/0/0.10) configurée avec une adresse IP pour agir comme passerelle par défaut d'un VLAN."},
+            {"id": 9, "front": "DHCP (Dynamic Host Configuration Protocol)", "back": "Protocole réseau qui automatise l'attribution de la configuration IP (IP, masque, passerelle, DNS) aux terminaux clients."},
+            {"id": 10, "front": "ACL (Access Control List)", "back": "Liste de filtrage (permettre/interdire) configurée sur les interfaces de routage pour contrôler, bloquer ou autoriser le trafic IP (ex: bloquer le ping)."},
+            {"id": 11, "front": "NAT (Network Address Translation)", "back": "Traduction d'adresse IP qui masque vos adresses IP privées locales derrière une adresse IP publique unique pour autoriser l'accès à l'Internet public."},
+            {"id": 12, "front": "Câble Ethernet catégorie 6", "back": "Câble de cuivre torsadé certifié pour supporter un débit stable de 1 Gbit/s sur 100 mètres (et jusqu'à 10 Gbit/s sur de courtes distances)."},
+            {"id": 13, "front": "Goulottes en PVC", "back": "Profilés de protection rigides installés le long des murs pour ranger, masquer et protéger physiquement le câblage horizontal RJ45 des postes."},
+            {"id": 14, "front": "Ping et protocole ICMP", "back": "Commande de test de connectivité logique utilisant les messages de requête et de réponse du protocole ICMP pour vérifier si une machine distante est accessible."},
+            {"id": 15, "front": "Adresse IP privée", "back": "Adresse IP non routable sur l'Internet public, réservée à l'usage interne des réseaux locaux (ex: plages 192.168.x.x, 10.x.x.x)."},
+            {"id": 16, "front": "Passerelle par défaut (Default Gateway)", "back": "Adresse de l'interface réseau du routeur local où les ordinateurs envoient leurs données destinées à d'autres réseaux (Internet, autres VLANs)."},
+            {"id": 17, "front": "Différence Commutateur L2 et L3", "back": "Le L2 fonctionne sur le niveau liaison (adresses MAC) tandis que le L3 intègre des fonctions de routage basées sur les paquets IP (Niveau réseau)."},
+            {"id": 18, "front": "Masque de sous-réseau", "back": "Structure de 32 bits séparant la partie 'réseau' de la partie 'hôte' d'une adresse IP pour déterminer la taille et la plage d'un sous-réseau local."},
+            {"id": 19, "front": "Norme IEEE 802.3ad (LACP)", "back": "Standard d'agrégation de ports physiques pour grouper la bande passante de plusieurs câbles en un seul lien logique et offrir une redondance instantanée."},
+            {"id": 20, "front": "VLAN par défaut (VLAN 1)", "back": "VLAN natif présent sur tous les ports des switches d'usine. Pour des raisons de sécurité, il ne doit pas être utilisé pour le trafic utilisateur."},
+            {"id": 21, "front": "Port d'accès (Access)", "back": "Type de port sur un commutateur affecté à un seul et unique VLAN, généralement relié aux machines terminales (ordinateurs, serveurs)."},
+            {"id": 22, "front": "Avantage d'une architecture segmentée", "back": "Améliore la sécurité (confinement des accès), limite le trafic réseau inutile de diffusion (broadcast) et simplifie le dépannage."},
+            {"id": 23, "front": "Console / Ligne de commande (CLI)", "back": "Interface en lignes de texte permettant de configurer manuellement le routeur ou le switch à l'aide de commandes spécifiques (via SSH ou câble console)."},
+            {"id": 24, "front": "Débit Gigabit Ethernet", "back": "Vitesse théorique de transmission de données équivalente à 1 Gbps (1000 Mbps) requise par les normes réseau modernes."},
+            {"id": 25, "front": "Commutation vs Routage", "back": "La commutation relie les machines à l'intérieur d'un même réseau local (MAC); le routage connecte plusieurs réseaux locaux distincts entre eux (IP)."}
+        ];
+
+        let activeCards = [...originalCards];
+        let starredIds = JSON.parse(localStorage.getItem('starredCards')) || [];
+        
+        // Données d'évaluation (Acquis/À revoir) stockées localement
+        let knownIds = JSON.parse(localStorage.getItem('knownCards')) || [];
+        let reviewIds = JSON.parse(localStorage.getItem('reviewCards')) || [];
+
+        let currentIndex = 0;
+        let showStarredOnly = false;
+
+        // Références DOM
+        const cardEl = document.getElementById('card');
+        const frontTextEl = document.getElementById('front-text');
+        const backTextEl = document.getElementById('back-text');
+        const progressEl = document.getElementById('progress');
+        const progressBarEl = document.getElementById('progress-bar');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const starBtn = document.getElementById('star-btn');
+        const starredCountEl = document.getElementById('starred-count');
+        const filterBtn = document.getElementById('filter-btn');
+        const evalZoneEl = document.getElementById('eval-zone');
+        const scoreAcquisEl = document.getElementById('score-acquis');
+        const scoreRevoirEl = document.getElementById('score-revoir');
+
+        // Initialisation Thème
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-theme');
+            document.getElementById('theme-btn').textContent = "☀️ Clair";
+        }
+
+        function updateCard() {
+            cardEl.classList.remove('flipped');
+            evalZoneEl.classList.remove('visible');
+            
+            if (activeCards.length === 0) {
+                frontTextEl.textContent = "Aucune carte !";
+                backTextEl.textContent = "Activez le mode normal ou désélectionnez le filtre favori.";
+                progressEl.textContent = "0 / 0";
+                progressBarEl.style.width = "0%";
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                starBtn.style.display = "none";
+                return;
+            }
+
+            starBtn.style.display = "block";
+            const currentCard = activeCards[currentIndex];
+
+            setTimeout(() => {
+                frontTextEl.textContent = currentCard.front;
+                backTextEl.textContent = currentCard.back;
+            }, 150);
+
+            starBtn.classList.toggle('starred', starredIds.includes(currentCard.id));
+
+            progressEl.textContent = `${currentIndex + 1} / ${activeCards.length}`;
+            progressBarEl.style.width = `${((currentIndex + 1) / activeCards.length) * 100}%`;
+
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === activeCards.length - 1;
+
+            updateScorePanel();
+        }
+
+        function flipCard() {
+            if (activeCards.length > 0) {
+                cardEl.classList.toggle('flipped');
+                evalZoneEl.classList.toggle('visible', cardEl.classList.contains('flipped'));
+            }
+        }
+
+        function nextCard() { if (currentIndex < activeCards.length - 1) { currentIndex++; updateCard(); } }
+        function prevCard() { if (currentIndex > 0) { currentIndex--; updateCard(); } }
+
+        // Favoris (Étoile)
+        function toggleStar(event) {
+            event.stopPropagation();
+            if (activeCards.length === 0) return;
+            const cardId = activeCards[currentIndex].id;
+            const idx = starredIds.indexOf(cardId);
+            if (idx > -1) starredIds.splice(idx, 1); else starredIds.push(cardId);
+            localStorage.setItem('starredCards', JSON.stringify(starredIds));
+            updateCard();
+        }
+
+        function toggleStarredFilter() {
+            showStarredOnly = !showStarredOnly;
+            filterBtn.classList.toggle('active', showStarredOnly);
+            activeCards = showStarredOnly ? originalCards.filter(c => starredIds.includes(c.id)) : [...originalCards];
+            currentIndex = 0;
+            updateCard();
+        }
+
+        // Évaluation (Mémorisation)
+        function markCard(isAcquired) {
+            if (activeCards.length === 0) return;
+            const cardId = activeCards[currentIndex].id;
+
+            if (isAcquired) {
+                if (!knownIds.includes(cardId)) knownIds.push(cardId);
+                reviewIds = reviewIds.filter(id => id !== cardId);
+            } else {
+                if (!reviewIds.includes(cardId)) reviewIds.push(cardId);
+                knownIds = knownIds.filter(id => id !== cardId);
+            }
+
+            localStorage.setItem('knownCards', JSON.stringify(knownIds));
+            localStorage.setItem('reviewCards', JSON.stringify(reviewIds));
+            updateScorePanel();
+            setTimeout(nextCard, 200); // Passe automatiquement à la suivante après sélection
+        }
+
+        function updateScorePanel() {
+            starredCountEl.textContent = starredIds.length;
+            scoreAcquisEl.textContent = knownIds.length;
+            scoreRevoirEl.textContent = reviewIds.length;
+        }
+
+        function resetStats() {
+            if (confirm("Réinitialiser tous vos scores de révision ?")) {
+                knownIds = [];
+                reviewIds = [];
+                localStorage.removeItem('knownCards');
+                localStorage.removeItem('reviewCards');
+                updateScorePanel();
+            }
+        }
+
+        function shuffleCards() {
+            activeCards.sort(() => Math.random() - 0.5);
+            currentIndex = 0;
+            updateCard();
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+            document.getElementById('theme-btn').textContent = isDark ? "☀️ Clair" : "🌙 Sombre";
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        // Contrôles Clavier
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); flipCard(); }
+            else if (e.code === 'ArrowRight') nextCard();
+            else if (e.code === 'ArrowLeft') prevCard();
+        });
+
+        // ================= SERVICE WORKER EMBARQUÉ (Pour le mode Hors-ligne) =================
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = 'flashcards-v2';
+                const ASSETS = [
+                    './',
+                    './index.html',
+                    'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=192&h=192&fit=crop&q=80',
+                    'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=512&h=512&fit=crop&q=80'
+                ];
+                self.addEventListener('install', e => {
+                    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+                });
+                self.addEventListener('fetch', e => {
+                    e.respondWith(caches.match(e.request).then(response => response || fetch(e.request)));
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(err => console.log('SW non enregistré', err));
+        }
+
+        // Détection d'installation Android (Chrome)
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-pwa').style.display = 'block';
+        });
+
+        function triggerPWAInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        document.getElementById('install-pwa').style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+
+        // Lancement
+        updateCard();
+    </script>
+</body>
+</html>
